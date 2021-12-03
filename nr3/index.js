@@ -1,6 +1,12 @@
+const { exit } = require("process");
 
 fs=require("fs");
-let lines=fs.readFileSync("../inputs/nr3.txt").toString().split("\n");
+if(process.argv.length<3){
+    console.log("Please provide path to input, exiting");
+    exit(-1)
+}
+
+let lines=fs.readFileSync(process.argv[2]).toString().split("\n");
 let numberLines=lines.length;
 let colWidth=lines[0].length;
 let resultArray=[]
