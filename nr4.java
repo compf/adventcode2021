@@ -6,7 +6,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Stream;
 
-import javax.swing.text.StyledEditorKit.BoldAction;
 
 public class nr4
 {
