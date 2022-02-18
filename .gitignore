@@ -1,3 +1,10 @@
 build
 inputs
 .vscode
+*.dll
+*.json
+*.cache
+*.csproj*
+*.pdb
+nr8/bin/*
+nr8/obj/*
