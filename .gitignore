@@ -8,3 +8,4 @@ inputs
 *.pdb
 nr8/bin/*
 nr8/obj/*
+nr12/out.txt
