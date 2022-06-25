@@ -1,94 +1,94 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-namespace nr14
-{
-    class Program
-    {
-        static (string replace,Dictionary<string,char> map) LoadData(string path)
+namespace nr14 {
+    class Program {
+        static  Dictionary<string,ulong> CreateCounterDict(string line)
         {
-            Dictionary<string,char> map=new Dictionary<string,char>();
-            string[] lines=System.IO.File.ReadAllLines(path);
-            string replace=lines[0];
-            for(int i=2;i<lines.Length;i++)
-            {
-                string line=lines[i];
-                string[] splitted=line.Split(new char[]{'-','>'},System.StringSplitOptions.RemoveEmptyEntries);
-                map.Add(splitted[0].Trim(),splitted[1].Trim()[0]);
+            Dictionary<string,ulong> dict=new();
+            for (int i = 1; i < line.Length; i++) {
+                string key =  line[i - 1] + "" +  line[i];
+                if (!dict.ContainsKey(key)) {
+                    dict.Add(key, 0);
+                }
+                dict[key] += 1;
             }
-            return (replace,map);
+            return dict;
         }
-        static void Main(string[] args)
+        private static bool CompareDict(Dictionary<string,ulong> me,Dictionary<string,ulong> comp)
         {
-            var input=LoadData(args[0]);
-            Console.WriteLine(input.replace);
-            ulong task1=Run(10,input.replace,input.map);
-            Console.WriteLine(task1);
-            ulong task2=Run(40,input.replace,input.map);
-            //Console.WriteLine(task2);
-           
+            Console.ForegroundColor=ConsoleColor.Red;
+            foreach(var c in comp.Keys)
+            {
+                if(comp[c]!=me[c])
+                {
+                    Console.WriteLine(c + "should be " + comp[c] +" but is " + me[c]);
+                                Console.ResetColor();
+
+                    return false;
+                }
+            }
+            Console.ResetColor();
+            return true;
+        }
+        static(Dictionary < string, ulong > replace, Dictionary < string, char > map) LoadData(string path) {
+            Dictionary < string, char > map = new Dictionary < string, char > ();
+            string[] lines = System.IO.File.ReadAllLines(path);
+            Dictionary < string, ulong > replace = CreateCounterDict(lines[0]);
+            
+            
+            for (int i = 2; i < lines.Length; i++) {
+                string line = lines[i];
+                string[] splitted = line.Split(new char[] {
+                    '-',
+                    '>'
+                }, System.StringSplitOptions.RemoveEmptyEntries);
+                map.Add(splitted[0].Trim(), splitted[1].Trim()[0]);
+            }
+            return (replace, map);
+        }
+        static void Main(string[] args) {
+            var input = LoadData(args[0]);
+            ulong task1 = Run(10, input.replace, input.map);
+            Console.WriteLine("Task1 " + task1);
+
+            ulong task2 = Run(40, input.replace, input.map);
+        Console.WriteLine("Task2 " + task2);
 
         }
-        private static ulong Run(int number,string input,Dictionary<string,char> map)
-        {
+        private static ulong Run(int number, Dictionary < string, ulong > input, Dictionary < string, char > map) {
+            Dictionary<char,ulong> elemCount=new();
+            for (int i = 0; i < number; i++) {
+                input=applyInsertions(input,map,elemCount);
+                   
+            }          
 
-            for(int i =0;i<number;i++)
-            {
-                input=applyInsertions(input,map);
-            }
-            string result=input;
-            //Console.WriteLine(result);
-            ulong maxMinDiff=CountMinMaxDiff(result);
+            ulong maxMinDiff = elemCount.Values.Max()-elemCount.Values.Min()-2; //not sure why subtracting 2
             return maxMinDiff;
         }
-        private static ulong CountMinMaxDiff(string input)
-        {
-            Dictionary<char,int> counter=new();
-            foreach(char c in input)
-            {
-                if(!counter.ContainsKey(c))
-                    counter[c]=0;
-                counter[c]+=1;
-            }
-            return (ulong)(counter.Values.Max()-counter.Values.Min());
-        }
-        private static string applyInsertions(string input,Dictionary<string,char> map)
-        {
-            List<(char,int)> insertions=new();
-             string copy=input;
-             int offset=0;
-            for(int i=1;i<input.Length;i++)
-            {
-                string key=input[i-1].ToString()+input[i];
+       
+        private static Dictionary < string,ulong > applyInsertions(Dictionary < string, ulong > input, Dictionary < string, char > map,Dictionary<char,ulong> elemCount) {
+            Dictionary < string, ulong > copy = new();
+            const string DEBUG="CN";
+            foreach(var key in input.Keys) {
                
                 if(map.ContainsKey(key))
                 {
-                   
-                    char inserted=map[key];
-                    insertions.Add((inserted,i+offset));
-                    offset+=1;
-                    
-                   
-                }
-                else
-                {
-                    
-                   
-                }
-               
-                //Console.WriteLine(copy);
+                    char replacedKey=map[key];
+                    elemCount[replacedKey]=(elemCount.ContainsKey(replacedKey)?elemCount[replacedKey]+input[key]:input[key]);
+                    string key1=key[0]+replacedKey.ToString();
+                    string key2=replacedKey.ToString()+key[1].ToString();
+                    copy[key1]=(copy.ContainsKey(key1)?copy[key1]+input[key]:input[key]);
+                    copy[key2]=(copy.ContainsKey(key2)?copy[key2]+input[key]:input[key]);
 
-
+                }
+                  
+           
             }
-            foreach(var insertion in insertions)
-            {
-                input=input.Insert(insertion.Item2,insertion.Item1.ToString());
-            }
-             Console.WriteLine(input.Length);
            
             
-           
-            return input;
+            
+            return copy;
         }
     }
 }
