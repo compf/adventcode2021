@@ -58,9 +58,7 @@ func getMatrix(path string,task2 bool) ([][]int){
     for scanner.Scan() {
         var line=scanner.Text()
         for _,c :=range line{
-            //fmt.Println("cool",c)
             var numValue int =int(c-'0') ;
-            fmt.Println(x,y,numValue)
             a[y][x]=numValue
             x++
         }
@@ -87,15 +85,34 @@ func getMatrix(path string,task2 bool) ([][]int){
                 offset:=offsetX+offsetY
                 for y:=0;y<dy;y++{
                     for x:=0;x<dx;x++{
-                        b[y+offsetY*dy][x+offsetX*dx]=(a[y][x]+offset)%10
+                        var val=modWrapOne(a[y][x],offset)
+                        b[y+offsetY*dy][x+offsetX*dx]=val
                     }
                 }
             
             }
         }
+        //printMatrix(b)
         return b
     }
     return a
+}
+func modWrapOne(number int,offset int) (int){
+    if number+offset >=10{
+        return (number+ offset) %10 +1
+    }else{
+        return (number+ offset) %10
+    }
+}
+func printMatrix(matrix [][]int){
+    dy:=len(matrix)
+    dx:=len(matrix[0])
+    for y:=0;y<dy;y++ {
+        for x:=0;x<dx;x++{
+            fmt.Print(matrix[y][x])
+        }
+        fmt.Println()
+    }
 }
 func load(path string,task2 bool) (*Graph[string,int]){
 
@@ -104,8 +121,6 @@ func load(path string,task2 bool) (*Graph[string,int]){
     matrix:=getMatrix(path,task2)
     for y:=0;y<len(matrix);y++ {
         for x:=0;x<len(matrix);x++{
-            //fmt.Println("cool",c)
-            var numValue int =matrix[y][x]
             var pos=strconv.Itoa(x)+","+strconv.Itoa(y)
             if  _,ok:=graph.nodes[pos];!ok{
                 var n=new (GraphNode[string,int])
@@ -114,10 +129,10 @@ func load(path string,task2 bool) (*Graph[string,int]){
                 graph.nodes[pos]=n
 
             }
-                addConnection(coordToString(x+1,y),graph,numValue,pos)
-                addConnection(coordToString(x-1,y),graph,numValue,pos)
-                addConnection(coordToString(x,y+1),graph,numValue,pos)
-                addConnection(coordToString(x,y-1),graph,numValue,pos)
+                addConnection(x+1,y,graph,pos,matrix)
+                addConnection(x-1,y,graph,pos,matrix)
+                addConnection(x,y+1,graph,pos,matrix)
+                addConnection(x,y-1,graph,pos,matrix)
             
             
         }
@@ -129,7 +144,14 @@ func load(path string,task2 bool) (*Graph[string,int]){
 func coordToString(x,y int)(string){
     return strconv.Itoa(x)+","+strconv.Itoa(y)
 }
-func addConnection(nPos string, graph *Graph[string,int], weight int,origPos string){
+func addConnection(x int,y int, graph *Graph[string,int],origPos string,matrix [][]int){
+    
+    size:=len(matrix)
+    if(x>= size || y>=size || x<0 || y<0){
+        return
+    }
+    weight:=matrix[y][x]
+    nPos:=coordToString(x,y)
     if  _,ok:=graph.nodes[nPos];!ok{
         var n=new (GraphNode[string,int])
         n.value=nPos
@@ -142,7 +164,6 @@ func addConnection(nPos string, graph *Graph[string,int], weight int,origPos str
     edge.from=graph.nodes[origPos]
     edge.data=weight
     graph.nodes[origPos].edges = append(graph.nodes[origPos].edges, *edge)
-    //print(" edge count  \n",len(graph.nodes[origPos].edges))
 
 }
 type PriorityQueue []*Item
@@ -200,15 +221,11 @@ func dijakstra(graph Graph[string,int],size int) (int){
     pq := make(PriorityQueue,0)
     heap.Push(&pq,&Item{priority: 0,value: "0,0"})
     for len(pq)>0{
-        //fmt.Println("new round")
         var curr=heap.Pop(&pq).(*Item)
-       //fmt.Println("found2",curr.value,curr.priority)
         visited[curr.value]=true
         distMap[curr.value]=curr.priority
         var node=graph.nodes[curr.value]
         for _,edge:= range node.edges{
-            //fmt.Println("edge",node.value,curr.value)
-            //fmt.Println("Node to",edge.from.value)
             var newPrio=curr.priority+edge.data
             var oldItem=pq.find(edge.to.value)
             if _,ok :=visited[edge.to.value];ok{
@@ -227,21 +244,26 @@ func dijakstra(graph Graph[string,int],size int) (int){
         
 
     }
-    fmt.Println("HZEE",lastPos)
-
     return distMap[lastPos]
 }
 
 
 func main()  {
-    fmt.Println("Hello, world.")
-    var task2=true
+    var task2=len(os.Args)>2
     var graph=load(os.Args[1],task2)
     var size=getLineWidth(os.Args[1])
     if task2{
+        
         size*=5
+       
     }
     val:=dijakstra(*graph,size)
-    fmt.Printf("Task 1: %v\n", val)
+    var taskNr=0
+    if(task2){
+        taskNr=2
+    }else{
+        taskNr=1
+    }
+    fmt.Println( "Task",taskNr,val)
     
 }
