@@ -16,6 +16,7 @@ trait Packet {
     fn calc_length(&self) -> usize;
     fn get_version_sum(&self) -> u32;
     fn get_type_id(&self)->u32;
+    fn calc_value(&self) ->u64;
 }
 impl Packet for LiteralPacket{
     fn calc_length(&self) -> usize {
@@ -26,6 +27,25 @@ impl Packet for LiteralPacket{
     }
     fn get_type_id(&self) -> u32 {
         return self.type_id;
+    }
+    fn calc_value(&self) ->u64 {
+        let mut counter=(self.literal_value.len()-1) as i64; 
+        let mut result=0;
+        let mut power=1;
+        let all_chars: Vec<char> = self.literal_value.chars().collect();
+            while counter >=0{
+            if(counter %5==0){
+                counter-=1;
+                continue;
+            }
+            else if all_chars[counter as usize]=='1' {
+                result+=power;
+            }
+            power*=2;
+            counter-=1;
+
+        }
+        return result;
     }
 }
 impl Packet for OperatorPacket {
@@ -51,6 +71,84 @@ impl Packet for OperatorPacket {
     fn get_type_id(&self) -> u32 {
         return self.type_id;
     }
+    fn calc_value(&self) ->u64 {
+        let mut lambda:fn(u64,u64)->u64;
+        if(self.type_id==0){
+            lambda=|x,y|->u64{
+                return x+y;
+            };
+        }
+        else if(self.type_id==1){
+            lambda=|x,y|->u64{
+                return x*y;
+            };
+        }
+        else if(self.type_id==2){
+            lambda=|x,y|->u64{
+                if(x<y){
+                    return x;
+                }
+                else{
+                    return y;
+                }
+            };
+        }
+        else if(self.type_id==3){
+            lambda=|x,y|->u64{
+                if(x>y){
+                    return x;
+                }
+                else{
+                    return y;
+                }
+            };
+        }
+        else if(self.type_id==5){
+            lambda=|x,y|->u64{
+                if(x>y){
+                    return 1;
+                }
+                else{
+                    return 0;
+                }
+            };
+        }
+        else if(self.type_id==6){
+            lambda=|x,y|->u64{
+                if(x<y){
+                    return 1;
+                }
+                else{
+                    return 0;
+                }
+            };
+        }
+        else if(self.type_id==7){
+            lambda=|x,y|->u64{
+                if(x==y){
+                    return 1;
+                }
+                else{
+                    return 0;
+                }
+            };
+        }
+        else{
+            lambda=|x,y|->u64{
+                return 0;
+            };
+        }
+        let mut result=self.sub_packets[0].calc_value();
+        if(self.sub_packets.len()>1){
+            for p in &self.sub_packets[1..self.sub_packets.len()]{
+                let val=p.calc_value();
+                result=lambda(result,val)
+            }
+        }
+        
+        return result;
+
+    }
 }
 
 fn parse(path: &str) -> String {
@@ -62,7 +160,7 @@ fn parse_packet_rec(curr_offset: &mut usize, text: &str,depth:u64)-> Box<dyn Pac
     let type_id = get_number(text, curr_offset, 3) as u32;
     println!("{}",version);
     if type_id == 4 {
-        let literal_value = parse_literal_packet(&text[*curr_offset..text.len() - 1], curr_offset);
+        let literal_value = parse_literal_packet(&text, curr_offset);
         return Box::new(LiteralPacket{version,type_id,literal_value});
     }
     else{
@@ -89,18 +187,20 @@ fn parse_packet_rec(curr_offset: &mut usize, text: &str,depth:u64)-> Box<dyn Pac
 fn parse_literal_packet(text: &str, offset: &mut usize) -> String {
     let mut result = String::from("");
     let all_chars: Vec<char> = text.chars().collect();
-    let mut counter = 0;
+    let mut index = offset;
+    let mut counter=0;
     let mut leave = false;
     while true {
-        result += &String::from(all_chars[counter]);
-        if counter % 5 == 0 && !leave && all_chars[counter] == '0' {
+        if counter % 5 == 0 && !leave && all_chars[*index] == '0' {
             leave = true;
         } else if counter % 5 == 0 && leave {
             break;
         }
+        result += &String::from(all_chars[*index]);
         counter+=1;
+        *index+=1;
+
     }
-    *offset+=counter;
     return result;
 }
 
@@ -153,8 +253,14 @@ fn main() {
    println!("{} test",args[1]);
     let binary=parse(&args[1]);
     let mut offset=0;
-
+    let task2 =args.len()>2;
     let packet=parse_packet_rec(&mut offset,&binary,0);
-    print!("{}",packet.get_version_sum());
+    if(task2){
+        println!("{}",packet.calc_value());
+    }
+    else {
+        println!("{}",packet.get_version_sum());
+    }
+    
 
 }
