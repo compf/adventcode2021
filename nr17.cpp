@@ -64,8 +64,8 @@ int main(int argc,char** argv){
     int minDX=getMinXSpeed(rect.xMin);
     int maxDX=getMinXSpeed(FACTOR*rect.xMax);
 
-    int minDY= -std::max(abs(rect.yMin),abs(rect.yMax));
-    int maxDY=FACTOR*-minDY;
+    int minDY= (rect.yMin);
+    int maxDY=2*abs(rect.yMax);
     std::atomic<int> counter=0;
     std::atomic<int> maxYVal;
     std::vector<std::pair<int,int>>speeds;
