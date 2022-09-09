@@ -1,0 +1,1 @@
+/home/compf/data/adventcode/nr14/Program.cs(60,43): error CS1002: ; expected [/home/compf/data/adventcode/nr14/nr14.csproj]
