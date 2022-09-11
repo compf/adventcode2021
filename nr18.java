@@ -10,14 +10,30 @@ import java.util.function.BiPredicate;
 import java.util.function.Predicate;
 
 public class nr18 {
-    public static class Tree {
+    public static class Tree  implements Cloneable{
         private Object left, right;
         private Tree parent;
 
         public Object getLeft() {
             return left;
         }
-
+        @Override
+        public Object clone(){
+            Tree result=new Tree();
+            if(left instanceof Tree){
+                result.setLeft(((Tree)left).clone());
+            }
+            else{
+                result.setLeft(left);
+            }
+            if(right instanceof Tree){
+                result.setRight(((Tree)right).clone());
+            }
+            else{
+                result.setRight(right);
+            }
+            return result;
+        }
         public Object getRight() {
             return right;
         }
@@ -237,17 +253,17 @@ public class nr18 {
         });
         if (toExplode == null)
             return false;
-        System.out.println("Explode "+toExplode);
+        //System.out.println("Explode "+toExplode);
         Tree addLeft = getClosestNode(toExplode,  true);
         if (addLeft == toExplode)
             addLeft = null;
-        if(addLeft!=null)
-            System.out.println("Left "+addLeft);
+        //if(addLeft!=null)
+          //  System.out.println("Left "+addLeft);
         Tree addRight = getClosestNode( toExplode, false);
         if (addRight == toExplode)
             addRight = null;
-        if(addRight!=null)
-            System.out.println("Right "+addRight);
+        //if(addRight!=null)
+          //  System.out.println("Right "+addRight);
 
         if (addLeft != null && addLeft.getRight() instanceof Integer) {
             addLeft.setRight((int) addLeft.getRight() + (int) toExplode.getLeft());
@@ -276,7 +292,7 @@ public class nr18 {
        
         if (toSplit == null)
             return false;
-        System.out.println("Split "+toSplit);
+        //System.out.println("Split "+toSplit);
         if (toSplit.getLeft() instanceof Integer && ((int) toSplit.getLeft()) >= 10) {
             int val = (int) toSplit.getLeft();
             Tree splitted = new Tree();
@@ -318,27 +334,47 @@ public class nr18 {
 
     public static void main(String... args) {
         var trees = parse(args[0]);
-        long totalSum = 0;
-        while (trees.size() >= 2) {
-            Tree tree1 = (trees.pop());
-            Tree tree2 = (trees.pop());
-            // System.out.println("Tree 1 "+tree1);
-            // System.out.println( "Tree 2"+tree2);
+        boolean task2 =args.length>1;
+        if(task2){
+            long maxMagnitude=0;
+            List<Tree> treeList=List.copyOf(trees);
 
-            Tree root = new Tree();
-            root.setLeft(tree1);
-            root.setRight(tree2);
-            
-            System.out.println("  "+tree1);
-            System.out.println("+ "+tree2);
-            trees.push(reduce(root));
-            System.out.println("= "+root);
-            System.out.println();
-
+            for(int i=0;i<treeList.size();i++){
+                for(int j=0;j<treeList.size();j++){
+                    if(i!=j){
+                        Tree root=new Tree();
+                        root.setLeft(treeList.get(i).clone());
+                        root.setRight(treeList.get(j).clone());
+                        reduce(root);
+                        long magnitude=root.magnitude();
+                        if(magnitude>maxMagnitude){
+                            maxMagnitude=magnitude;
+                        }
+                    }
+                }
+            }
+            System.out.println(maxMagnitude);
         }
-        Tree remainingTree = reduce(trees.pop());
-        System.out.println();
-        System.out.println(remainingTree);
-        System.out.println(remainingTree.magnitude());
+        else{
+            while (trees.size() >= 2) {
+                Tree tree1 = (trees.pop());
+                Tree tree2 = (trees.pop());
+                Tree root = new Tree();
+                root.setLeft(tree1);
+                root.setRight(tree2);
+                
+                System.out.println("  "+tree1);
+                System.out.println("+ "+tree2);
+                trees.push(reduce(root));
+                System.out.println("= "+root);
+                System.out.println();
+    
+            }
+            Tree remainingTree = reduce(trees.pop());
+            System.out.println();
+            System.out.println(remainingTree);
+            System.out.println(remainingTree.magnitude());
+        }
+
     }
 }
