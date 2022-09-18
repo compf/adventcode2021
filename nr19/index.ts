@@ -149,15 +149,15 @@ function findOverlappingBeacons(
   nodesRelativeVector: Map<number, (Point & { id_from: string })[]>
 ) {
   let keys = Array.from(nodesRelativeVector.keys());
-  let n1=0;
+  let n1 = 0;
   while (hasRotated.size < nodesRelativeVector.size) {
     for (let i = 1; i < keys.length; i++) {
       let n2 = i;
       checkBeacons(nodesRelativeVector, n1, n2);
     }
-    do{
-        n1++;
-    }while(!hasRotated.has(n1));
+    do {
+      n1++;
+    } while (!hasRotated.has(n1));
   }
 }
 function copyPointCoord(src: Point, dst: Point) {
@@ -166,12 +166,29 @@ function copyPointCoord(src: Point, dst: Point) {
   dst.z = src.z;
   dst.id = src.id;
 }
+function updateBeacon(
+  scannerId: number,
+  oldBeaconId: string,
+  newBeaconId: string,
+  order: string
+): Point {
+  let key = JSON.stringify({ scanner: scannerId, beacon: oldBeaconId });
+  //console.log(ScannerBeaconPosMap.has(key),key);
+  let pt = ScannerBeaconPosMap.get(key);
+
+  pt!.id = newBeaconId;
+  let transformed = applyPermutation(pt!, order);
+  copyPointCoord(transformed, pt!);
+  return pt!;
+}
 const hasRotated: Set<number> = new Set();
 function checkBeacons(
   nodesRelativeVector: Map<number, (Point & { id_from: string })[]>,
   n1: number,
   n2: number
 ) {
+    let minVector:Point|null=null
+    let minDistance=1e100;
   let pairs = product(
     nodesRelativeVector.get(n1)!,
     nodesRelativeVector.get(n2)!
@@ -189,23 +206,34 @@ function checkBeacons(
     if (areSameRelativeVectors(b2, b1, outIndex)) {
       const order = PermutationOrder[outIndex.index];
       hasRotated.add(n2);
-      let key = JSON.stringify({ scanner: n2!, beacon: b2.id });
       //console.log(ScannerBeaconPosMap.has(key),key);
-      let pt = ScannerBeaconPosMap.get(key);
-      if (pt == undefined) pt = { x: 0, y: 0, z: 0, id: "" };
-      pt.id = b1.id;
-      let transformed = applyPermutation(pt, order);
-      copyPointCoord(transformed, pt);
-      key = JSON.stringify({ scanner: n2, beacon: b2.id_from });
-      pt = ScannerBeaconPosMap.get(key);
-      if (pt == undefined) pt = { x: 0, y: 0, z: 0, id: "" };
-      pt.id = b1.id_from;
-      transformed = applyPermutation(pt, order);
-      copyPointCoord(transformed, pt);
+      let fromN2 = updateBeacon(n2, b2.id, b1.id, order);
 
-      b2.id = b1.id;
-      b2.id_from = b1.id_from;
-      transformed = applyPermutation(b1, order);
+      let fromN1 = updateBeacon(n1, b1.id, b2.id, PermutationOrder[0]);
+
+      let N2FromN1 = {
+        x: fromN1.x + -fromN2.x,
+        y: fromN1.y + -fromN2.y,
+        z: fromN1.z + -fromN2.z,
+        id: n2 + "_from_" + n1,
+      };
+      const dist=N2FromN1.x*N2FromN1.x+N2FromN1.y*N2FromN1.y+N2FromN1.z*N2FromN1.z;
+      if(dist<minDistance){
+        minDistance=dist;
+        minVector=N2FromN1;
+      }
+      ScannerBeaconPosMap.set(
+        JSON.stringify({ scanner: n1, beacon: n2 }),
+        N2FromN1
+      );
+
+      fromN2 = updateBeacon(n2, b2.id_from, b1.id_from, order);
+
+      fromN1 = updateBeacon(n1, b1.id_from, b2.id_from, order);
+
+      //b2.id = b1.id;
+      //b2.id_from = b1.id_from;
+      let transformed = applyPermutation(b1, order);
       //console.log("Before",b1.x,b1.y,b1.z);
       //console.log("After",transformed.x,transformed.y,transformed.z);
       b2.x = transformed.x;
@@ -220,7 +248,44 @@ function checkBeacons(
       );
     }
   }
-  //console.log(transformationKindCounter);
+
+}
+function getRelativeVectorFromScanner0() {
+  let currScannerEdges: Array<string> = [];
+  for (let key of ScannerBeaconPosMap.keys()) {
+    let parsed = JSON.parse(key) as { scanner: number; beacon: string };
+    if (isNaN(Number(parsed.beacon))) continue;
+    currScannerEdges.push(key);
+  }
+  let allScannerEdges: Set<string> = new Set();
+  for (let i = 1; i < nodes.size; i++) {
+    let queue: Array<{ from: number; vector: Point }> = [];
+    queue.push({ from: 0, vector: { x: 0, y: 0, z: 0, id: i + "" } });
+    while (queue.length > 0) {
+      let curr = queue.shift()!;
+      if (curr.from == i) {
+        let key = JSON.stringify({ scanner: 0, beacon: i + "" });
+        allScannerEdges.add(key);
+        ScannerBeaconPosMap.set(key, curr.vector);
+      }
+      for (let key of currScannerEdges) {
+        let dir = ScannerBeaconPosMap.get(key)!;
+        let parsed = JSON.parse(key) as { scanner: number; beacon: string };
+        if (parsed.scanner == curr.from) {
+          queue.push({
+            from: parseInt(parsed.beacon),
+            vector: {
+              x: curr.vector.x + dir.x,
+              y: curr.vector.y + dir.y,
+              z: curr.vector.z + dir.z,
+              id: curr.vector.id,
+            },
+          });
+        }
+      }
+    }
+  }
+  return allScannerEdges;
 }
 function areSameRelativeVectors(
   v1: Point,
@@ -248,4 +313,6 @@ hasRotated.add(0);
 let nodes = loadData(path);
 let nodesRelativeVector = findBeaconsRelativeEachOther(nodes);
 let d = findOverlappingBeacons(nodesRelativeVector);
-console.log(hasRotated);
+
+let scannerEdges = getRelativeVectorFromScanner0();
+
