@@ -1,17 +1,18 @@
 import { randomUUID } from "crypto";
 import { readFileSync } from "fs";
-import { argv, argv0, listenerCount, off } from "process";
-import { stringify } from "querystring";
+import { argv, } from "process";
+
 interface Point {
   x: number;
   y: number;
   z: number;
 }
+
 class Scanner {
   public offset: Point;
   public beacons: Point[];
   public id: number;
-  public hasRotated = false;
+  public uid=randomUUID();
   static fromIdAndPoints(id: number, beacons: Point[]): Scanner {
     return new Scanner({ x: 0, y: 0, z: 0 }, beacons, id);
   }
@@ -23,8 +24,7 @@ class Scanner {
       otherScanner.beacons.map((p) => JSON.stringify(p))
     );
     for (let pt of myPoints) {
-      if (otherPoints.has(pt)) 7;
-      counter++;
+      if (otherPoints.has(pt)) counter++;
     }
     return counter >= minimumMatchingPoints;
   }
@@ -38,12 +38,14 @@ class Scanner {
             y: srcPoint.y - dstPoint.y,
             z: srcPoint.z - dstPoint.z,
           };
+         
           let tempScanner = Scanner.fromScannerAndOffset(
             rotatedScanner,
             offset
           );
           if (this.enoughMatchingPoints(tempScanner)) {
-            tempScanner.hasRotated = true;
+            tempScanner.offset=offset;
+            hasRotated.add(tempScanner.id);
             return tempScanner;
           }
         }
@@ -99,20 +101,6 @@ class Scanner {
     this.id = id;
   }
 }
-class BiMap<A, B> {
-  private a_b: Map<A, B> = new Map();
-  private b_a: Map<B, A> = new Map();
-  public set(a: A, b: B) {
-    this.a_b.set(a, b);
-    this.b_a.set(b, a);
-  }
-  public getAB(a: A) {
-    return this.a_b.get(a);
-  }
-  public getBA(b: B) {
-    return this.b_a.get(b);
-  }
-}
 
 function loadData(path: string): Scanner[] {
   let no = -1;
@@ -138,6 +126,7 @@ function loadData(path: string): Scanner[] {
       beacons.push(pt);
     }
   }
+  scanners.push(Scanner.fromIdAndPoints(no, beacons))
   return scanners;
 }
 function checkOrderValid(order: string): boolean {
@@ -197,32 +186,58 @@ const PermutationOrder = (function () {
   }
   return result;
 })();
-
+const hasRotated: Set<number> = new Set();
 function processScanners(scanners: Scanner[]) {
-  scanners[0].hasRotated = true;
-    let resultingScanners=[scanners[0]];
-  while (scanners.some((s) => !s.hasRotated)) {
-    let notRotatedScanner = scanners.filter((s) => !s.hasRotated)[0];
-    let rotatedScanners = scanners.filter((s) => s.hasRotated);
-    let lastScanner: Scanner | null = null;
-    let index = 0;
-    while (lastScanner == null) {
-      lastScanner =
-        rotatedScanners[index].createFittingScanner(notRotatedScanner);
+  hasRotated.add(0);
+  let awaiting: Scanner[] = [scanners[0]]
+  let finnished: Scanner[] =scanners.filter((s)=>s.id!=0);
+
+  let result = [scanners[0]];
+  while (awaiting.length > 0) {
+    let curr = awaiting.shift()!;
+    for(let i=0;i<finnished.length;i++){
+      let res=curr.createFittingScanner(finnished[i]);
+      if(res!=null){
+        scanners=scanners.filter((s)=>s.uid!=finnished[i].uid);
+        scanners.push(res);
+        awaiting.push(res);
+        finnished[i]=res;
+      }
     }
-    resultingScanners.push(lastScanner);
+    for (let a of awaiting){
+      finnished=finnished.filter((s)=>s.uid!=a.uid);
+    }
+   
   }
-  return resultingScanners;
+  return scanners;
 }
 
 let path = argv[2];
 let scanners = loadData(path);
-let transformedScanners=processScanners(scanners)
-let points:Set<string>=new Set();
-for(let scanner of transformedScanners){
-    for(let pt of scanner.beacons){
-        points.add(JSON.stringify(pt));
+let transformedScanners = processScanners(scanners);
+let points: Set<string> = new Set();
+let task2=argv.length>3;
+if(task2){
+  let maxManhattan=-1;
+  for(let i =1;i<transformedScanners.length;i++){
+    for(let j=0;j<i;j++){
+      let s1=transformedScanners[i];
+      let s2=transformedScanners[j];
+      let manhattan=Math.abs(s1.offset.x-s2.offset.x)+Math.abs(s1.offset.y-s2.offset.y)+Math.abs(s1.offset.z-s2.offset.z);
+      if(manhattan>maxManhattan){
+        maxManhattan=manhattan;
+      }
     }
+  }
+  console.log(maxManhattan);
 }
-console.log(points.size);
+else{
+  for (let scanner of transformedScanners) {
+    for (let pt of scanner.beacons) {
+      points.add(JSON.stringify(pt));
+    }
+  }
+  
+  console.log(points.size);
+}
 
