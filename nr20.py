@@ -6,11 +6,9 @@ MIN_TEMP_Y=10000
 MAX_TEMP_Y=-10000
 
 
-MIN_X=10000
-MAX_X=-10000
-MIN_Y=10000
-MAX_Y=-10000
+
 BORDER=25
+CURR_BORDER_MODE=True
 def load_data(path:str)->Tuple[dict,List[bool]]:
     with open(path) as f:
         enhanchment_algorithm=[]
@@ -121,49 +119,51 @@ def get_neighbors_binary(image:dict,y:int,x:int):
             result+=power
         power*=2
     return result
-
+def print_neighbors(image:dict,sy:int,sx:int,radius:int):
+    print(sy,sx)
+    for y in range(sy-radius,sy+radius):
+        for x in range(sx-radius,sx+radius):
+            print("#" if get_image_value(image,y,x) else ".",end="")
+        print()
+    print()
 def kernel(image:dict,algorithm:List[bool]):
     output=dict()
 
 
-    for y in range(MIN_Y-BORDER,MAX_Y+BORDER):
-        for x in range(MIN_X-BORDER,MAX_X+BORDER):
+    for y in range(MIN_Y,MAX_Y+1):
+        for x in range(MIN_X,MAX_X+1):
             index=get_neighbors_binary(image,y,x)
             set_image_value(output,y,x,algorithm[index])
     return output
+def is_annoying_border_point(image,y,x):
+   return x==MAX_X or y==MIN_Y
 def print_image(image:dict):
-    for y in range(MIN_Y-BORDER,MAX_Y+BORDER):
-        for x in range(MIN_X-BORDER,MAX_X+BORDER):
+    for y in range(MIN_Y,MAX_Y):
+        for x in range(MIN_X,MAX_X):
             print("#" if get_image_value(image,y,x) else ".",end="")
-        print()
-sys.argv=["","inputs/nr20.txt","x"]      
+        print()     
 data=load_data(sys.argv[1])
 image,alg=data
 counter=0
-
-#print_image(image)
+MIN_X,MAX_X,MIN_Y,MAX_Y=get_bounding_box(image)
 iterations=50 if len(sys.argv)>2 else 2
-#print()
+BORDER=20
+MIN_X-=(iterations+BORDER)
+MIN_Y-=(iterations+BORDER)
+MAX_X+=(iterations+BORDER)
+MAX_Y+=(iterations+BORDER)
 for i in range(iterations):
     
-    if i<iterations-1:
-        MAX_X=MAX_TEMP_X
-        MAX_Y=MAX_TEMP_Y
-        MIN_X=MIN_TEMP_X
-        MIN_Y=MIN_TEMP_Y
+   
     image=kernel(image,alg)
-    #print_image(image)
-    #print_image(image)
-    #print()
-delete_rects(image)
+    for pt in [(y,x) for (y,x) in image if  is_annoying_border_point(image,y,x)]:
+        image[pt]= CURR_BORDER_MODE
+    CURR_BORDER_MODE=not CURR_BORDER_MODE
 
 for y in range(MIN_Y,MAX_Y+1):
     for x in range(MIN_X,MAX_X+1):
-        #if y==MIN_Y-BORDER or x ==MIN_X-BORDER  or y ==MAX_Y+BORDER-1 or  x==MAX_X+BORDER-1:
-            #continue
         if get_image_value(image,y,x):
             counter+=1
-print_image(image)
 print(counter)
 
 
